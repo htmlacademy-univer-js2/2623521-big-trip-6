@@ -1,6 +1,4 @@
-import FiltersView from './view/filters-view.js';
-import { render } from './render.js';
+import Presenter from './presenter.js';
 
-const filtersContainer = document.querySelector('.trip-controls__filters');
-
-render(new FiltersView(), filtersContainer);
+const presenter = new Presenter();
+presenter.init();
