@@ -7,30 +7,32 @@ import TripEventView from './view/trip-event-view.js';
 import EditFormView from './view/edit-form-view.js';
 
 export default class Presenter {
-  constructor() {
+  constructor(pointsModel) {
+    this.pointsModel = pointsModel;
     this.filtersContainer = document.querySelector('.trip-controls__filters');
     this.tripEventsContainer = document.querySelector('.trip-events');
   }
 
   init() {
-    // Filters (1)
     render(new FiltersView(), this.filtersContainer, RenderPosition.BEFOREEND);
-
-    // Sort (1)
     render(new SortView(), this.tripEventsContainer, RenderPosition.BEFOREEND);
 
-    // List container
-    const tripList = new TripListView();
-    render(tripList, this.tripEventsContainer, RenderPosition.BEFOREEND);
+    const list = new TripListView();
+    render(list, this.tripEventsContainer, RenderPosition.BEFOREEND);
 
-    const listElement = tripList.getElement();
+    const listElement = list.getElement();
 
-    // Edit form (1) — first in list
-    render(new EditFormView(), listElement, RenderPosition.AFTERBEGIN);
+    // Edit form primero (como antes)
+    const firstPoint = this.pointsModel.points[0];
+    render(new EditFormView(firstPoint), listElement, RenderPosition.AFTERBEGIN);
 
-    // Events (3)
-    for (let i = 0; i < 3; i++) {
-      render(new TripEventView(), listElement, RenderPosition.BEFOREEND);
+    // Render puntos desde el model
+    for (const point of this.pointsModel.points) {
+      const destination = this.pointsModel.getDestinationById(point.destinationId);
+      const offers = this.pointsModel.getOffersByType(point.type)
+        .filter((o) => point.offersIds.includes(o.id));
+
+      render(new TripEventView({point, destination, offers}), listElement, RenderPosition.BEFOREEND);
     }
   }
 }
