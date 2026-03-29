@@ -1,4 +1,4 @@
-import AbstractView from './abstract-view';
+import AbstractView from './abstract-view.js';
 
 const capitalize = (word) => word[0].toUpperCase() + word.slice(1);
 
@@ -6,13 +6,24 @@ export default class TripEventView extends AbstractView {
   #point;
   #destination;
   #offers;
+  #handleRollupClick;
 
-  constructor({point, destination, offers}) {
+  constructor({point, destination, offers, onRollupClick}) {
     super();
     this.#point = point;
     this.#destination = destination;
     this.#offers = offers;
+    this.#handleRollupClick = onRollupClick;
+
+    this.getElement()
+      .querySelector('.event__rollup-btn')
+      .addEventListener('click', this.#rollupClickHandler);
   }
+
+  #rollupClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#handleRollupClick();
+  };
 
   get template() {
     const {type, basePrice, dateFrom, dateTo} = this.#point;
