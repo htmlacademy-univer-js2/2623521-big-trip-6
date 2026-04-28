@@ -1,8 +1,8 @@
 import AbstractStatefulView from './abstract-stateful-view.js';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
 
 const capitalize = (word) => word[0].toUpperCase() + word.slice(1);
-const formatTime = (date) =>
-  new Date(date).toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
 
 export default class EditFormView extends AbstractStatefulView {
   #destinations = [];
@@ -10,6 +10,9 @@ export default class EditFormView extends AbstractStatefulView {
 
   #handleFormSubmit = null;
   #handleRollupClick = null;
+
+  #datepickerFrom = null;
+  #datepickerTo = null;
 
   constructor({point, destination, offersByType, destinations, onFormSubmit, onRollupClick}) {
     super();
@@ -45,12 +48,9 @@ export default class EditFormView extends AbstractStatefulView {
               </label>
 
               <select class="event__type-select">
-                ${Object.keys(this.#offersByType).length
-    ? Object.keys(this.#offersByType).map((t) => `
-                    <option value="${t}" ${t === type ? 'selected' : ''}>${capitalize(t)}</option>
-                  `).join('')
-    : ''
-}
+                ${Object.keys(this.#offersByType).map((t) => `
+                  <option value="${t}" ${t === type ? 'selected' : ''}>${capitalize(t)}</option>
+                `).join('')}
               </select>
             </div>
 
@@ -66,9 +66,21 @@ export default class EditFormView extends AbstractStatefulView {
             </div>
 
             <div class="event__field-group  event__field-group--time">
-              <input class="event__input  event__input--time" type="text" value="${formatTime(dateFrom)}" disabled>
+              <label class="visually-hidden" for="event-start-time-1">From</label>
+              <input
+                class="event__input  event__input--time"
+                id="event-start-time-1"
+                type="text"
+                name="event-start-time"
+                value="${dateFrom}">
               —
-              <input class="event__input  event__input--time" type="text" value="${formatTime(dateTo)}" disabled>
+              <label class="visually-hidden" for="event-end-time-1">To</label>
+              <input
+                class="event__input  event__input--time"
+                id="event-end-time-1"
+                type="text"
+                name="event-end-time"
+                value="${dateTo}">
             </div>
 
             <div class="event__field-group  event__field-group--price">
@@ -101,8 +113,61 @@ export default class EditFormView extends AbstractStatefulView {
     element.querySelector('form').addEventListener('submit', this.#formSubmitHandler);
     element.querySelector('.event__rollup-btn').addEventListener('click', this.#rollupClickHandler);
 
-    element.querySelector('.event__type-select')?.addEventListener('change', this.#typeChangeHandler);
-    element.querySelector('.event__input--destination')?.addEventListener('change', this.#destinationChangeHandler);
+    element.querySelector('.event__type-select').addEventListener('change', this.#typeChangeHandler);
+    element.querySelector('.event__input--destination').addEventListener('change', this.#destinationChangeHandler);
+
+    this.#setDatepickers();
+  }
+
+  #setDatepickers() {
+    const element = this.getElement();
+
+    const startInput = element.querySelector('#event-start-time-1');
+    const endInput = element.querySelector('#event-end-time-1');
+
+    if (!startInput || !endInput) {
+      return;
+    }
+
+    if (this.#datepickerFrom) {
+      this.#datepickerFrom.destroy();
+      this.#datepickerFrom = null;
+    }
+
+    if (this.#datepickerTo) {
+      this.#datepickerTo.destroy();
+      this.#datepickerTo = null;
+    }
+
+    this.#datepickerFrom = flatpickr(startInput, {
+      enableTime: true,
+      dateFormat: 'd/m/y H:i',
+      defaultDate: this._state.point.dateFrom,
+      onChange: ([userDate]) => {
+        this._state = {
+          ...this._state,
+          point: {
+            ...this._state.point,
+            dateFrom: userDate,
+          },
+        };
+      },
+    });
+
+    this.#datepickerTo = flatpickr(endInput, {
+      enableTime: true,
+      dateFormat: 'd/m/y H:i',
+      defaultDate: this._state.point.dateTo,
+      onChange: ([userDate]) => {
+        this._state = {
+          ...this._state,
+          point: {
+            ...this._state.point,
+            dateTo: userDate,
+          },
+        };
+      },
+    });
   }
 
   #formSubmitHandler = (evt) => {
@@ -118,7 +183,6 @@ export default class EditFormView extends AbstractStatefulView {
   #typeChangeHandler = (evt) => {
     const newType = evt.target.value;
 
-    // меняем тип + сбрасываем offersIds (как говорит задание)
     const newPoint = {
       ...this._state.point,
       type: newType,
