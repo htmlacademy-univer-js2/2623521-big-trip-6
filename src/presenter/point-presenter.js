@@ -10,6 +10,9 @@ const Mode = {
 export default class PointPresenter {
   #listContainer = null;
 
+  #destinations = null;
+  #offersByType = null;
+
   #handleModeChange = null;
   #handleDataChange = null;
 
@@ -22,8 +25,10 @@ export default class PointPresenter {
 
   #mode = Mode.DEFAULT;
 
-  constructor({listContainer, onModeChange, onDataChange}) {
+  constructor({listContainer, destinations, offersByType, onModeChange, onDataChange}) {
     this.#listContainer = listContainer;
+    this.#destinations = destinations;
+    this.#offersByType = offersByType;
     this.#handleModeChange = onModeChange;
     this.#handleDataChange = onDataChange;
   }
@@ -47,6 +52,8 @@ export default class PointPresenter {
     this.#editComponent = new EditFormView({
       point: this.#point,
       destination: this.#destination,
+      destinations: this.#destinations,
+      offersByType: this.#offersByType,
       onFormSubmit: this.#handleCloseForm,
       onRollupClick: this.#handleCloseForm,
     });

@@ -22,10 +22,10 @@ const sortByDay = (a, b) => new Date(a.dateFrom) - new Date(b.dateFrom);
 const sortByTime = (a, b) => {
   const durationA = new Date(a.dateTo) - new Date(a.dateFrom);
   const durationB = new Date(b.dateTo) - new Date(b.dateFrom);
-  return durationB - durationA; // más largo primero (como en el proyecto)
+  return durationB - durationA;
 };
 
-const sortByPrice = (a, b) => b.basePrice - a.basePrice; // más caro primero
+const sortByPrice = (a, b) => b.basePrice - a.basePrice;
 
 export default class Presenter {
   #pointsModel = null;
@@ -77,7 +77,6 @@ export default class Presenter {
   }
 
   #renderSort() {
-    // если уже отрисовывали сортировку — уберём старую
     if (this.#sortComponent) {
       remove(this.#sortComponent);
     }
@@ -117,11 +116,9 @@ export default class Presenter {
   }
 
   #clearPointsList() {
-    // destroy presenters
     this.#pointPresenters.forEach((presenter) => presenter.destroy());
     this.#pointPresenters.clear();
 
-    // remove list component
     if (this.#tripListComponent) {
       remove(this.#tripListComponent);
       this.#tripListComponent = null;
@@ -145,6 +142,8 @@ export default class Presenter {
 
       const pointPresenter = new PointPresenter({
         listContainer: listElement,
+        destinations: this.#pointsModel.destinations,
+        offersByType: this.#pointsModel.offersByType,
         onModeChange: this.#handlePointModeChange,
         onDataChange: this.#handlePointChange,
       });
@@ -169,17 +168,14 @@ export default class Presenter {
   }
 
   #handleSortTypeChange = (sortType) => {
-    // 4) не перерисовываем если сортировка не изменилась
     if (this.#currentSortType === sortType) {
       return;
     }
 
     this.#currentSortType = sortType;
 
-    // перерисовать сортировку (чтобы checked обновился)
     this.#renderSort();
 
-    // перерисовать список по новому порядку
     const points = this.#pointsModel?.points ?? [];
     this.#renderPoints(this.#getSortedPoints(points));
   };
@@ -189,7 +185,6 @@ export default class Presenter {
   };
 
   #handlePointChange = (updatedPoint) => {
-    // update data in model array
     const points = this.#pointsModel.points;
     const index = points.findIndex((p) => p.id === updatedPoint.id);
     if (index === -1) {
@@ -197,7 +192,6 @@ export default class Presenter {
     }
     points[index] = updatedPoint;
 
-    // re-render only this point (keeps current sort order in DOM as-is)
     const destination = this.#pointsModel.getDestinationById(updatedPoint.destinationId);
     const offers = this.#pointsModel
       .getOffersByType(updatedPoint.type)
@@ -210,3 +204,4 @@ export default class Presenter {
     });
   };
 }
+
