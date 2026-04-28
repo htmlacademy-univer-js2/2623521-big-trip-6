@@ -9,11 +9,23 @@ import LoadingView from './view/loading-view.js';
 import FailedLoadDataView from './view/failed-load-data-view.js';
 import ListEmptyView from './view/list-empty-view.js';
 
+import {SortType} from './const.js';
+
 const UiState = {
   LOADING: 'loading',
   ERROR: 'error',
   READY: 'ready',
 };
+
+const sortByDay = (a, b) => new Date(a.dateFrom) - new Date(b.dateFrom);
+
+const sortByTime = (a, b) => {
+  const durationA = new Date(a.dateTo) - new Date(a.dateFrom);
+  const durationB = new Date(b.dateTo) - new Date(b.dateFrom);
+  return durationB - durationA; // más largo primero (como en el proyecto)
+};
+
+const sortByPrice = (a, b) => b.basePrice - a.basePrice; // más caro primero
 
 export default class Presenter {
   #pointsModel = null;
@@ -21,6 +33,7 @@ export default class Presenter {
   #filtersContainer = null;
   #tripEventsContainer = null;
 
+  #sortComponent = null;
   #tripListComponent = null;
   #pointPresenters = new Map();
 
@@ -29,6 +42,8 @@ export default class Presenter {
   #loadingComponent = new LoadingView();
   #failedComponent = new FailedLoadDataView();
   #emptyComponent = null;
+
+  #currentSortType = SortType.DAY;
 
   constructor(pointsModel) {
     this.#pointsModel = pointsModel;
@@ -39,7 +54,6 @@ export default class Presenter {
 
   init() {
     render(new FiltersView(), this.#filtersContainer, RenderPosition.BEFOREEND);
-    render(new SortView(), this.#tripEventsContainer, RenderPosition.BEFOREEND);
 
     const points = this.#pointsModel?.points ?? [];
 
@@ -58,7 +72,22 @@ export default class Presenter {
       return;
     }
 
-    this.#renderPoints(points);
+    this.#renderSort();
+    this.#renderPoints(this.#getSortedPoints(points));
+  }
+
+  #renderSort() {
+    // если уже отрисовывали сортировку — уберём старую
+    if (this.#sortComponent) {
+      remove(this.#sortComponent);
+    }
+
+    this.#sortComponent = new SortView({
+      currentSortType: this.#currentSortType,
+      onSortTypeChange: this.#handleSortTypeChange,
+    });
+
+    render(this.#sortComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
   }
 
   #clearMessages() {
@@ -87,15 +116,26 @@ export default class Presenter {
     render(this.#emptyComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
   }
 
+  #clearPointsList() {
+    // destroy presenters
+    this.#pointPresenters.forEach((presenter) => presenter.destroy());
+    this.#pointPresenters.clear();
+
+    // remove list component
+    if (this.#tripListComponent) {
+      remove(this.#tripListComponent);
+      this.#tripListComponent = null;
+    }
+  }
+
   #renderPoints(points) {
     this.#clearMessages();
+    this.#clearPointsList();
 
     this.#tripListComponent = new TripListView();
     render(this.#tripListComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
 
     const listElement = this.#tripListComponent.getElement();
-
-    this.#pointPresenters.clear();
 
     for (const point of points) {
       const destination = this.#pointsModel.getDestinationById(point.destinationId);
@@ -114,12 +154,42 @@ export default class Presenter {
     }
   }
 
+  #getSortedPoints(points) {
+    const sorted = [...points];
+
+    switch (this.#currentSortType) {
+      case SortType.TIME:
+        return sorted.sort(sortByTime);
+      case SortType.PRICE:
+        return sorted.sort(sortByPrice);
+      case SortType.DAY:
+      default:
+        return sorted.sort(sortByDay);
+    }
+  }
+
+  #handleSortTypeChange = (sortType) => {
+    // 4) не перерисовываем если сортировка не изменилась
+    if (this.#currentSortType === sortType) {
+      return;
+    }
+
+    this.#currentSortType = sortType;
+
+    // перерисовать сортировку (чтобы checked обновился)
+    this.#renderSort();
+
+    // перерисовать список по новому порядку
+    const points = this.#pointsModel?.points ?? [];
+    this.#renderPoints(this.#getSortedPoints(points));
+  };
+
   #handlePointModeChange = () => {
     this.#pointPresenters.forEach((presenter) => presenter.resetView());
   };
 
   #handlePointChange = (updatedPoint) => {
-    // 1) Actualizar datos en el "mock/model"
+    // update data in model array
     const points = this.#pointsModel.points;
     const index = points.findIndex((p) => p.id === updatedPoint.id);
     if (index === -1) {
@@ -127,7 +197,7 @@ export default class Presenter {
     }
     points[index] = updatedPoint;
 
-    // 2) Re-render SOLO ese punto
+    // re-render only this point (keeps current sort order in DOM as-is)
     const destination = this.#pointsModel.getDestinationById(updatedPoint.destinationId);
     const offers = this.#pointsModel
       .getOffersByType(updatedPoint.type)
