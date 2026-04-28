@@ -6,18 +6,26 @@ export default class TripEventView extends AbstractView {
   #point;
   #destination;
   #offers;
-  #handleRollupClick;
 
-  constructor({point, destination, offers, onRollupClick}) {
+  #handleRollupClick;
+  #handleFavoriteClick;
+
+  constructor({point, destination, offers, onRollupClick, onFavoriteClick}) {
     super();
     this.#point = point;
     this.#destination = destination;
     this.#offers = offers;
+
     this.#handleRollupClick = onRollupClick;
+    this.#handleFavoriteClick = onFavoriteClick;
 
     this.getElement()
       .querySelector('.event__rollup-btn')
       .addEventListener('click', this.#rollupClickHandler);
+
+    this.getElement()
+      .querySelector('.event__favorite-btn')
+      .addEventListener('click', this.#favoriteClickHandler);
   }
 
   #rollupClickHandler = (evt) => {
@@ -25,8 +33,13 @@ export default class TripEventView extends AbstractView {
     this.#handleRollupClick();
   };
 
+  #favoriteClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#handleFavoriteClick();
+  };
+
   get template() {
-    const {type, basePrice, dateFrom, dateTo} = this.#point;
+    const {type, basePrice, dateFrom, dateTo, isFavorite} = this.#point;
     const destinationName = this.#destination?.name ?? '';
 
     const start = new Date(dateFrom);
@@ -50,10 +63,12 @@ export default class TripEventView extends AbstractView {
          </ul>`
       : '';
 
+    const favoriteClass = isFavorite ? 'event__favorite-btn--active' : '';
+
     return `
       <li class="trip-events__item">
         <div class="event">
-          <time class="event__date" datetime="${dateFrom}">${month} ${day}</time>
+          <time class="event__date" datetime="${start.toISOString()}">${month} ${day}</time>
 
           <div class="event__type">
             <img class="event__type-icon" width="42" height="42"
@@ -64,9 +79,9 @@ export default class TripEventView extends AbstractView {
 
           <div class="event__schedule">
             <p class="event__time">
-              <time class="event__start-time" datetime="${dateFrom}">${startTime}</time>
+              <time class="event__start-time" datetime="${start.toISOString()}">${startTime}</time>
               —
-              <time class="event__end-time" datetime="${dateTo}">${endTime}</time>
+              <time class="event__end-time" datetime="${end.toISOString()}">${endTime}</time>
             </p>
           </div>
 
@@ -77,6 +92,13 @@ export default class TripEventView extends AbstractView {
           <div class="event__offers">
             ${offersTemplate}
           </div>
+
+          <button class="event__favorite-btn ${favoriteClass}" type="button">
+            <span class="visually-hidden">Add to favorite</span>
+            <svg class="event__favorite-icon" width="28" height="28" viewBox="0 0 28 28">
+              <path d="M14 21l-7.3 3.8 1.4-8.1L2.3 10.6l8.1-1.2L14 2l3.6 7.4 8.1 1.2-5.8 6.1 1.4 8.1z"></path>
+            </svg>
+          </button>
 
           <button class="event__rollup-btn" type="button">
             <span class="visually-hidden">Open event</span>
