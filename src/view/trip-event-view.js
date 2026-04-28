@@ -1,4 +1,5 @@
 import AbstractView from './abstract-view.js';
+import {formatEventDate, formatEventTime, formatDuration} from '../utils/date.js';
 
 const capitalize = (word) => word[0].toUpperCase() + word.slice(1);
 
@@ -42,15 +43,6 @@ export default class TripEventView extends AbstractView {
     const {type, basePrice, dateFrom, dateTo, isFavorite} = this.#point;
     const destinationName = this.#destination?.name ?? '';
 
-    const start = new Date(dateFrom);
-    const end = new Date(dateTo);
-
-    const startTime = start.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
-    const endTime = end.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
-
-    const month = start.toLocaleString('en-US', {month: 'short'}).toUpperCase();
-    const day = String(start.getDate()).padStart(2, '0');
-
     const offersTemplate = this.#offers.length
       ? `<h4 class="visually-hidden">Offers:</h4>
          <ul class="event__selected-offers">
@@ -68,21 +60,22 @@ export default class TripEventView extends AbstractView {
     return `
       <li class="trip-events__item">
         <div class="event">
-          <time class="event__date" datetime="${start.toISOString()}">${month} ${day}</time>
+          <time class="event__date" datetime="${dateFrom}">${formatEventDate(dateFrom)}</time>
 
           <div class="event__type">
             <img class="event__type-icon" width="42" height="42"
               src="img/icons/${type}.png" alt="Event type icon">
           </div>
 
-          <h3 class="event__title">${capitalize(type)} to ${destinationName}</h3>
+          <h3 class="event__title">${capitalize(type)} ${destinationName}</h3>
 
           <div class="event__schedule">
             <p class="event__time">
-              <time class="event__start-time" datetime="${start.toISOString()}">${startTime}</time>
+              <time class="event__start-time" datetime="${dateFrom}">${formatEventTime(dateFrom)}</time>
               —
-              <time class="event__end-time" datetime="${end.toISOString()}">${endTime}</time>
+              <time class="event__end-time" datetime="${dateTo}">${formatEventTime(dateTo)}</time>
             </p>
+            <p class="event__duration">${formatDuration(dateFrom, dateTo)}</p>
           </div>
 
           <p class="event__price">
