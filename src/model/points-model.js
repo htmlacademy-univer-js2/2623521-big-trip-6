@@ -3,12 +3,28 @@ export default class PointsModel {
   #destinations = [];
   #offersByType = {};
 
-  constructor({ points, destinations, offersByType }) {
+  constructor({points, destinations, offersByType}) {
     this.#points = points;
     this.#destinations = destinations;
     this.#offersByType = offersByType;
   }
 
+  // ✅ Métodos requeridos para la 7.10
+  getPoints() {
+    return [...this.#points];
+  }
+
+  setPoints(points) {
+    this.#points = points;
+  }
+
+  updatePoint(updatedPoint) {
+    this.#points = this.#points.map((point) =>
+      point.id === updatedPoint.id ? updatedPoint : point
+    );
+  }
+
+  // (Esto lo dejas también si lo estabas usando)
   get points() {
     return this.#points;
   }
