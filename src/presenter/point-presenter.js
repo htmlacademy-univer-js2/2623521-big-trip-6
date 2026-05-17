@@ -1,6 +1,7 @@
 import {replace, render, remove, RenderPosition} from '../render.js';
 import TripEventView from '../view/trip-event-view.js';
 import EditFormView from '../view/edit-form-view.js';
+import {UserAction} from '../const.js';
 
 const Mode = {
   DEFAULT: 'DEFAULT',
@@ -14,7 +15,7 @@ export default class PointPresenter {
   #offersByType = null;
 
   #handleModeChange = null;
-  #handleDataChange = null;
+  #handleAction = null;
 
   #point = null;
   #destination = null;
@@ -25,12 +26,12 @@ export default class PointPresenter {
 
   #mode = Mode.DEFAULT;
 
-  constructor({listContainer, destinations, offersByType, onModeChange, onDataChange}) {
+  constructor({listContainer, destinations, offersByType, onModeChange, onAction}) {
     this.#listContainer = listContainer;
     this.#destinations = destinations;
     this.#offersByType = offersByType;
     this.#handleModeChange = onModeChange;
-    this.#handleDataChange = onDataChange;
+    this.#handleAction = onAction;
   }
 
   init({point, destination, offers}) {
@@ -54,8 +55,9 @@ export default class PointPresenter {
       destination: this.#destination,
       destinations: this.#destinations,
       offersByType: this.#offersByType,
-      onFormSubmit: this.#handleCloseForm,
+      onFormSubmit: this.#handleFormSubmit,
       onRollupClick: this.#handleCloseForm,
+      onDeleteClick: this.#handleDeleteClick,
     });
 
     if (prevPointComponent === null || prevEditComponent === null) {
@@ -96,13 +98,23 @@ export default class PointPresenter {
     this.#replaceFormToPoint();
   };
 
+  // ⭐ Favorite
   #handleFavoriteClick = () => {
-    const updatedPoint = {
+    this.#handleAction(UserAction.UPDATE_POINT, {
       ...this.#point,
       isFavorite: !this.#point.isFavorite,
-    };
+    });
+  };
 
-    this.#handleDataChange(updatedPoint);
+  // 💾 Save (submit)
+  #handleFormSubmit = (updatedPoint) => {
+    this.#handleAction(UserAction.UPDATE_POINT, updatedPoint);
+    this.#replaceFormToPoint();
+  };
+
+  // 🗑 Delete
+  #handleDeleteClick = (pointToDelete) => {
+    this.#handleAction(UserAction.DELETE_POINT, pointToDelete);
   };
 
   #replacePointToForm() {

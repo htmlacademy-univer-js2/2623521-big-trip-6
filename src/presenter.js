@@ -1,15 +1,16 @@
 import {render, RenderPosition, remove} from './render.js';
 
-import FiltersView from './view/filters-view.js';
 import SortView from './view/sort-view.js';
 import TripListView from './view/trip-list-view.js';
 import PointPresenter from './presenter/point-presenter.js';
+import EditFormView from './view/edit-form-view.js';
 
 import LoadingView from './view/loading-view.js';
 import FailedLoadDataView from './view/failed-load-data-view.js';
 import ListEmptyView from './view/list-empty-view.js';
 
-import {SortType} from './const.js';
+import {SortType, FilterType, UserAction} from './const.js';
+import dayjs from 'dayjs';
 
 const UiState = {
   LOADING: 'loading',
@@ -29,8 +30,8 @@ const sortByPrice = (a, b) => b.basePrice - a.basePrice;
 
 export default class Presenter {
   #pointsModel = null;
+  #filterModel = null;
 
-  #filtersContainer = null;
   #tripEventsContainer = null;
 
   #sortComponent = null;
@@ -45,17 +46,31 @@ export default class Presenter {
 
   #currentSortType = SortType.DAY;
 
-  constructor(pointsModel) {
-    this.#pointsModel = pointsModel;
+  // для синхронизации UI фильтров при New event
+  #filtersPresenter = null;
 
-    this.#filtersContainer = document.querySelector('.trip-controls__filters');
+  // New event
+  #newEventButton = null;
+  #creatingComponent = null;
+
+  constructor({pointsModel, filterModel}) {
+    this.#pointsModel = pointsModel;
+    this.#filterModel = filterModel;
+
     this.#tripEventsContainer = document.querySelector('.trip-events');
+
+    // hook button
+    this.#newEventButton = document.querySelector('.trip-main__event-add-btn');
+    this.#newEventButton.addEventListener('click', this.#handleNewEventClick);
+  }
+
+  // будет вызываться из main.js
+  setFiltersPresenter(filtersPresenter) {
+    this.#filtersPresenter = filtersPresenter;
   }
 
   init() {
-    render(new FiltersView(), this.#filtersContainer, RenderPosition.BEFOREEND);
-
-    const points = this.#pointsModel?.points ?? [];
+    const points = this.#pointsModel.getPoints();
 
     if (this.#uiState === UiState.LOADING) {
       this.#renderLoading();
@@ -67,13 +82,30 @@ export default class Presenter {
       return;
     }
 
-    if (points.length === 0) {
+    this.#renderSort();
+    this.#renderByState(points);
+  }
+
+  // вызываем это из FiltersPresenter
+  onFilterChange = () => {
+    this.#currentSortType = SortType.DAY;
+
+    this.#renderSort();
+    this.#renderByState(this.#pointsModel.getPoints());
+  };
+
+  #renderByState(points) {
+    this.#clearMessages();
+
+    const filteredPoints = this.#getFilteredPoints(points);
+
+    if (filteredPoints.length === 0) {
+      this.#clearPointsList();
       this.#renderEmpty();
       return;
     }
 
-    this.#renderSort();
-    this.#renderPoints(this.#getSortedPoints(points));
+    this.#renderPoints(this.#getSortedPoints(filteredPoints));
   }
 
   #renderSort() {
@@ -89,7 +121,12 @@ export default class Presenter {
     render(this.#sortComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
   }
 
+  // FIX definitivo: удалить ВСЕ msg
   #clearMessages() {
+    this.#tripEventsContainer
+      .querySelectorAll('.trip-events__msg')
+      .forEach((node) => node.remove());
+
     remove(this.#loadingComponent);
     remove(this.#failedComponent);
 
@@ -111,7 +148,10 @@ export default class Presenter {
 
   #renderEmpty() {
     this.#clearMessages();
-    this.#emptyComponent = new ListEmptyView({filterType: 'everything'});
+
+    const filterType = this.#filterModel.getFilter();
+    this.#emptyComponent = new ListEmptyView({filterType});
+
     render(this.#emptyComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
   }
 
@@ -145,11 +185,28 @@ export default class Presenter {
         destinations: this.#pointsModel.destinations,
         offersByType: this.#pointsModel.offersByType,
         onModeChange: this.#handlePointModeChange,
-        onDataChange: this.#handlePointChange,
+        onAction: this.#handleViewAction,
       });
 
       pointPresenter.init({point, destination, offers});
       this.#pointPresenters.set(point.id, pointPresenter);
+    }
+  }
+
+  #getFilteredPoints(points) {
+    const filterType = this.#filterModel.getFilter();
+    const now = dayjs();
+
+    switch (filterType) {
+      case FilterType.FUTURE:
+        return points.filter((p) => dayjs(p.dateFrom).isAfter(now));
+      case FilterType.PAST:
+        return points.filter((p) => dayjs(p.dateTo).isBefore(now));
+      case FilterType.PRESENT:
+        return points.filter((p) => dayjs(p.dateFrom).isBefore(now) && dayjs(p.dateTo).isAfter(now));
+      case FilterType.EVERYTHING:
+      default:
+        return points;
     }
   }
 
@@ -175,33 +232,114 @@ export default class Presenter {
     this.#currentSortType = sortType;
 
     this.#renderSort();
-
-    const points = this.#pointsModel?.points ?? [];
-    this.#renderPoints(this.#getSortedPoints(points));
+    this.#renderByState(this.#pointsModel.getPoints());
   };
 
   #handlePointModeChange = () => {
     this.#pointPresenters.forEach((presenter) => presenter.resetView());
   };
 
-  #handlePointChange = (updatedPoint) => {
-    const points = this.#pointsModel.points;
-    const index = points.findIndex((p) => p.id === updatedPoint.id);
-    if (index === -1) {
+  // update/delete/add
+  #handleViewAction = (actionType, update) => {
+    switch (actionType) {
+      case UserAction.UPDATE_POINT:
+        this.#pointsModel.updatePoint(update);
+        break;
+
+      case UserAction.DELETE_POINT:
+        this.#pointsModel.setPoints(
+          this.#pointsModel.getPoints().filter((p) => p.id !== update.id)
+        );
+        break;
+
+      case UserAction.ADD_POINT:
+        this.#pointsModel.setPoints([update, ...this.#pointsModel.getPoints()]);
+        break;
+
+      default:
+        break;
+    }
+
+    this.#renderByState(this.#pointsModel.getPoints());
+  };
+
+  // NEW EVENT (ADD) — обязательное для 7.10
+  #handleNewEventClick = () => {
+    // только одна create-форма
+    if (this.#creatingComponent) {
       return;
     }
-    points[index] = updatedPoint;
 
-    const destination = this.#pointsModel.getDestinationById(updatedPoint.destinationId);
-    const offers = this.#pointsModel
-      .getOffersByType(updatedPoint.type)
-      .filter((offer) => updatedPoint.offersIds.includes(offer.id));
+    // закрыть все edit-формы
+    this.#handlePointModeChange();
 
-    this.#pointPresenters.get(updatedPoint.id).init({
-      point: updatedPoint,
-      destination,
-      offers,
+    // reset filter + sort
+    this.#filterModel.setFilter(FilterType.EVERYTHING);
+    this.#currentSortType = SortType.DAY;
+
+    // обновить UI фильтров (checked)
+    if (this.#filtersPresenter) {
+      this.#filtersPresenter.init();
+    }
+
+    this.#renderSort();
+
+    // гарантируем что есть список (даже если был empty)
+    this.#clearMessages();
+    this.#clearPointsList();
+
+    this.#tripListComponent = new TripListView();
+    render(this.#tripListComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
+
+    const listElement = this.#tripListComponent.getElement();
+
+    const now = new Date();
+    const defaultDestination = this.#pointsModel.destinations[0];
+
+    const newPoint = {
+      id: String(Date.now()),
+      type: 'taxi',
+      destinationId: defaultDestination.id,
+      offersIds: [],
+      basePrice: 0,
+      dateFrom: now,
+      dateTo: new Date(now.getTime() + 60 * 60 * 1000),
+      isFavorite: false,
+    };
+
+    this.#newEventButton.disabled = true;
+
+    this.#creatingComponent = new EditFormView({
+      point: newPoint,
+      destination: defaultDestination,
+      destinations: this.#pointsModel.destinations,
+      offersByType: this.#pointsModel.offersByType,
+
+      onFormSubmit: (createdPoint) => {
+        remove(this.#creatingComponent);
+        this.#creatingComponent = null;
+        this.#newEventButton.disabled = false;
+
+        this.#handleViewAction(UserAction.ADD_POINT, createdPoint);
+      },
+
+      onRollupClick: () => {
+        remove(this.#creatingComponent);
+        this.#creatingComponent = null;
+        this.#newEventButton.disabled = false;
+
+        this.#renderByState(this.#pointsModel.getPoints());
+      },
+
+      onDeleteClick: () => {
+        remove(this.#creatingComponent);
+        this.#creatingComponent = null;
+        this.#newEventButton.disabled = false;
+
+        this.#renderByState(this.#pointsModel.getPoints());
+      },
     });
+
+    render(this.#creatingComponent, listElement, RenderPosition.AFTERBEGIN);
   };
 }
-
