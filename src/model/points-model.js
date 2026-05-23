@@ -1,17 +1,16 @@
-// src/model/points-model.js
-
 export default class PointsModel {
+  #apiService = null;
   #points = [];
   #destinations = [];
   #offersByType = {};
 
-  constructor({points, destinations, offersByType}) {
+  constructor({apiService, points, destinations, offersByType}) {
+    this.#apiService = apiService;
     this.#points = points;
     this.#destinations = destinations;
     this.#offersByType = offersByType;
   }
 
-  // getters (por compatibilidad)
   get points() {
     return this.#points;
   }
@@ -24,7 +23,6 @@ export default class PointsModel {
     return this.#offersByType;
   }
 
-  // los que pide 7/8 (y los usa tu Presenter)
   getPoints() {
     return this.#points;
   }
@@ -41,15 +39,32 @@ export default class PointsModel {
     this.#offersByType = offersByType;
   }
 
-  updatePoint(updatedPoint) {
-    this.#points = this.#points.map((point) =>
-      point.id === updatedPoint.id ? updatedPoint : point
-    );
+  async addPoint(point) {
+    const createdPoint = await this.#apiService.addPoint(point);
+
+    this.#points = [createdPoint, ...this.#points];
+
+    return createdPoint;
   }
 
-  // helpers
+  async updatePoint(point) {
+    const updatedPoint = await this.#apiService.updatePoint(point);
+
+    this.#points = this.#points.map((currentPoint) =>
+      currentPoint.id === updatedPoint.id ? updatedPoint : currentPoint
+    );
+
+    return updatedPoint;
+  }
+
+  async deletePoint(pointId) {
+    await this.#apiService.deletePoint(pointId);
+
+    this.#points = this.#points.filter((point) => point.id !== pointId);
+  }
+
   getDestinationById(id) {
-    return this.#destinations.find((d) => d.id === id);
+    return this.#destinations.find((destination) => destination.id === id);
   }
 
   getOffersByType(type) {

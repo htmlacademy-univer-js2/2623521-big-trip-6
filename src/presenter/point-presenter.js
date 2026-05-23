@@ -85,8 +85,21 @@ export default class PointPresenter {
 
   resetView() {
     if (this.#mode !== Mode.DEFAULT) {
+      this.#editComponent.reset(this.#point);
       this.#replaceFormToPoint();
     }
+  }
+
+  setSaving() {
+    this.#editComponent?.setSaving();
+  }
+
+  setDeleting() {
+    this.#editComponent?.setDeleting();
+  }
+
+  setAborting() {
+    this.#editComponent?.setAborting();
   }
 
   #handleOpenForm = () => {
@@ -95,26 +108,27 @@ export default class PointPresenter {
   };
 
   #handleCloseForm = () => {
+    this.#editComponent.reset(this.#point);
     this.#replaceFormToPoint();
   };
 
-  // Favorite
   #handleFavoriteClick = () => {
-    this.#handleAction(UserAction.UPDATE_POINT, {
-      ...this.#point,
-      isFavorite: !this.#point.isFavorite,
-    });
+    this.#handleAction(
+      UserAction.UPDATE_POINT,
+      {
+        ...this.#point,
+        isFavorite: !this.#point.isFavorite,
+      },
+      this
+    );
   };
 
-  //Save (submit)
   #handleFormSubmit = (updatedPoint) => {
-    this.#handleAction(UserAction.UPDATE_POINT, updatedPoint);
-    this.#replaceFormToPoint();
+    this.#handleAction(UserAction.UPDATE_POINT, updatedPoint, this);
   };
 
-  // Delete
   #handleDeleteClick = (pointToDelete) => {
-    this.#handleAction(UserAction.DELETE_POINT, pointToDelete);
+    this.#handleAction(UserAction.DELETE_POINT, pointToDelete, this);
   };
 
   #replacePointToForm() {
@@ -132,6 +146,7 @@ export default class PointPresenter {
   #escKeyDownHandler = (evt) => {
     if (evt.key === 'Escape' || evt.key === 'Esc') {
       evt.preventDefault();
+      this.#editComponent.reset(this.#point);
       this.#replaceFormToPoint();
     }
   };
