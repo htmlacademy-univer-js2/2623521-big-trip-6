@@ -10,19 +10,26 @@ const FilterLabel = {
 
 export default class FiltersView extends AbstractView {
   #currentFilterType = FilterType.EVERYTHING;
+  #disabledFilters = {};
   #handleFilterChange = null;
 
-  constructor({currentFilterType, onFilterChange}) {
+  constructor({currentFilterType, disabledFilters, onFilterChange}) {
     super();
+
     this.#currentFilterType = currentFilterType;
+    this.#disabledFilters = disabledFilters;
     this.#handleFilterChange = onFilterChange;
 
-    this.getElement()
-      .addEventListener('change', this.#filterChangeHandler);
+    this.getElement().addEventListener('change', this.#filterChangeHandler);
   }
 
   #filterChangeHandler = (evt) => {
     evt.preventDefault();
+
+    if (evt.target.disabled) {
+      return;
+    }
+
     this.#handleFilterChange(evt.target.value);
   };
 
@@ -38,6 +45,7 @@ export default class FiltersView extends AbstractView {
               name="trip-filter"
               value="${filterType}"
               ${filterType === this.#currentFilterType ? 'checked' : ''}
+              ${this.#disabledFilters[filterType] ? 'disabled' : ''}
             >
             <label class="trip-filters__filter-label" for="filter-${filterType}">
               ${FilterLabel[filterType]}

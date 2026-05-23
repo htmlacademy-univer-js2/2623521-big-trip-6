@@ -4,6 +4,7 @@ import SortView from './view/sort-view.js';
 import TripListView from './view/trip-list-view.js';
 import PointPresenter from './presenter/point-presenter.js';
 import EditFormView from './view/edit-form-view.js';
+import TripInfoView from './view/trip-info-view.js';
 
 import LoadingView from './view/loading-view.js';
 import FailedLoadDataView from './view/failed-load-data-view.js';
@@ -34,7 +35,9 @@ export default class Presenter {
   #filterModel = null;
 
   #tripEventsContainer = null;
+  #tripMainContainer = null;
 
+  #tripInfoComponent = null;
   #sortComponent = null;
   #tripListComponent = null;
   #pointPresenters = new Map();
@@ -57,6 +60,7 @@ export default class Presenter {
     this.#filterModel = filterModel;
 
     this.#tripEventsContainer = document.querySelector('.trip-events');
+    this.#tripMainContainer = document.querySelector('.trip-main');
 
     this.#newEventButton = document.querySelector('.trip-main__event-add-btn');
     this.#newEventButton.addEventListener('click', this.#handleNewEventClick);
@@ -82,15 +86,18 @@ export default class Presenter {
     const points = this.#pointsModel.getPoints();
 
     if (this.#uiState === UiState.LOADING) {
+      this.#clearTripInfo();
       this.#renderLoading();
       return;
     }
 
     if (this.#uiState === UiState.ERROR) {
+      this.#clearTripInfo();
       this.#renderError();
       return;
     }
 
+    this.#renderTripInfo();
     this.#renderSort();
     this.#renderByState(points);
 
@@ -102,6 +109,31 @@ export default class Presenter {
     this.#renderSort();
     this.#renderByState(this.#pointsModel.getPoints());
   };
+
+  #renderTripInfo() {
+    this.#clearTripInfo();
+
+    const points = this.#pointsModel.getPoints();
+
+    if (points.length === 0) {
+      return;
+    }
+
+    this.#tripInfoComponent = new TripInfoView({
+      points,
+      destinations: this.#pointsModel.destinations,
+      offersByType: this.#pointsModel.offersByType,
+    });
+
+    render(this.#tripInfoComponent, this.#tripMainContainer, RenderPosition.AFTERBEGIN);
+  }
+
+  #clearTripInfo() {
+    if (this.#tripInfoComponent) {
+      remove(this.#tripInfoComponent);
+      this.#tripInfoComponent = null;
+    }
+  }
 
   #renderByState(points) {
     this.#clearMessages();
@@ -280,6 +312,8 @@ export default class Presenter {
           break;
       }
 
+      this.#filtersPresenter?.init();
+      this.#renderTripInfo();
       this.#renderByState(this.#pointsModel.getPoints());
     } catch (err) {
       if (actionType === UserAction.ADD_POINT) {

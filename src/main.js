@@ -5,7 +5,7 @@ import FiltersPresenter from './presenter/filters-presenter.js';
 import ApiService from './api/api-service.js';
 
 const END_POINT = 'https://24.objects.htmlacademy.pro/big-trip';
-const AUTHORIZATION = `Basic ${Math.random().toString(36).slice(2)}`;
+const AUTHORIZATION = 'Basic dilan-big-trip-8';
 
 const apiService = new ApiService({
   endPoint: END_POINT,
@@ -25,6 +25,7 @@ const presenter = new Presenter({pointsModel, filterModel});
 
 const filtersPresenter = new FiltersPresenter({
   filtersContainer: document.querySelector('.trip-controls__filters'),
+  pointsModel,
   filterModel,
   onFilterChange: presenter.onFilterChange,
 });
@@ -44,6 +45,8 @@ Promise.all([
     pointsModel.setPoints(points);
     pointsModel.setDestinations(destinations);
     pointsModel.setOffersByType(offersByType);
+
+    filtersPresenter.init();
 
     presenter.setReady();
     presenter.init();
