@@ -28,7 +28,6 @@ export default class FiltersPresenter {
   }
 
   #filterChangeHandler = (filterType) => {
-    // если фильтр не меняется — ничего не делаем
     if (this.#filterModel.getFilter() === filterType) {
       return;
     }

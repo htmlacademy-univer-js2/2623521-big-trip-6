@@ -1,3 +1,5 @@
+// src/model/points-model.js
+
 export default class PointsModel {
   #points = [];
   #destinations = [];
@@ -9,22 +11,7 @@ export default class PointsModel {
     this.#offersByType = offersByType;
   }
 
-  // ✅ Métodos requeridos para la 7.10
-  getPoints() {
-    return [...this.#points];
-  }
-
-  setPoints(points) {
-    this.#points = points;
-  }
-
-  updatePoint(updatedPoint) {
-    this.#points = this.#points.map((point) =>
-      point.id === updatedPoint.id ? updatedPoint : point
-    );
-  }
-
-  // (Esto lo dejas también si lo estabas usando)
+  // getters (por compatibilidad)
   get points() {
     return this.#points;
   }
@@ -37,6 +24,30 @@ export default class PointsModel {
     return this.#offersByType;
   }
 
+  // los que pide 7/8 (y los usa tu Presenter)
+  getPoints() {
+    return this.#points;
+  }
+
+  setPoints(points) {
+    this.#points = points;
+  }
+
+  setDestinations(destinations) {
+    this.#destinations = destinations;
+  }
+
+  setOffersByType(offersByType) {
+    this.#offersByType = offersByType;
+  }
+
+  updatePoint(updatedPoint) {
+    this.#points = this.#points.map((point) =>
+      point.id === updatedPoint.id ? updatedPoint : point
+    );
+  }
+
+  // helpers
   getDestinationById(id) {
     return this.#destinations.find((d) => d.id === id);
   }
