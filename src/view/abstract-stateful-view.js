@@ -8,17 +8,24 @@ export default class AbstractStatefulView extends AbstractView {
     const parent = prevElement.parentElement;
 
     this.removeElement();
-
     const newElement = this.getElement();
 
-    if (parent) {
-      parent.replaceChild(newElement, prevElement);
+    if (parent === null) {
+      return;
     }
 
+    prevElement.replaceWith(newElement);
     this._restoreHandlers();
   }
 
+  _setState(update) {
+    this._state = {
+      ...this._state,
+      ...update,
+    };
+  }
+
   _restoreHandlers() {
-    // to be implemented in child classes
+    throw new Error('Abstract method not implemented: _restoreHandlers');
   }
 }
