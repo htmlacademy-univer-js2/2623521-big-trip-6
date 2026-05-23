@@ -59,9 +59,21 @@ export default class Presenter {
 
     this.#tripEventsContainer = document.querySelector('.trip-events');
 
-    // hook button
     this.#newEventButton = document.querySelector('.trip-main__event-add-btn');
     this.#newEventButton.addEventListener('click', this.#handleNewEventClick);
+  }
+
+  // --- UI state for module 8 ---
+  setLoading() {
+    this.#uiState = UiState.LOADING;
+  }
+
+  setReady() {
+    this.#uiState = UiState.READY;
+  }
+
+  setError() {
+    this.#uiState = UiState.ERROR;
   }
 
   // будет вызываться из main.js
@@ -84,12 +96,14 @@ export default class Presenter {
 
     this.#renderSort();
     this.#renderByState(points);
+
+    // включаем кнопку New event только когда реально есть данные
+    this.#newEventButton.disabled = this.#pointsModel.destinations.length === 0;
   }
 
   // вызываем это из FiltersPresenter
   onFilterChange = () => {
     this.#currentSortType = SortType.DAY;
-
     this.#renderSort();
     this.#renderByState(this.#pointsModel.getPoints());
   };
@@ -121,7 +135,6 @@ export default class Presenter {
     render(this.#sortComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
   }
 
-  // FIX definitivo: удалить ВСЕ msg
   #clearMessages() {
     this.#tripEventsContainer
       .querySelectorAll('.trip-events__msg')
@@ -138,20 +151,20 @@ export default class Presenter {
 
   #renderLoading() {
     this.#clearMessages();
+    this.#clearPointsList();
     render(this.#loadingComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
   }
 
   #renderError() {
     this.#clearMessages();
+    this.#clearPointsList();
     render(this.#failedComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
   }
 
   #renderEmpty() {
     this.#clearMessages();
-
     const filterType = this.#filterModel.getFilter();
     this.#emptyComponent = new ListEmptyView({filterType});
-
     render(this.#emptyComponent, this.#tripEventsContainer, RenderPosition.BEFOREEND);
   }
 
@@ -239,7 +252,6 @@ export default class Presenter {
     this.#pointPresenters.forEach((presenter) => presenter.resetView());
   };
 
-  // update/delete/add
   #handleViewAction = (actionType, update) => {
     switch (actionType) {
       case UserAction.UPDATE_POINT:
@@ -263,8 +275,13 @@ export default class Presenter {
     this.#renderByState(this.#pointsModel.getPoints());
   };
 
-  // NEW EVENT (ADD) — обязательное для 7.10
+  // NEW EVENT
   #handleNewEventClick = () => {
+    // если данные ещё не приехали — не даём создавать (иначе undefined.id)
+    if (this.#pointsModel.destinations.length === 0) {
+      return;
+    }
+
     // только одна create-форма
     if (this.#creatingComponent) {
       return;

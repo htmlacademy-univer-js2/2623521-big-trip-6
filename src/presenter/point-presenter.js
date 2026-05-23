@@ -98,7 +98,7 @@ export default class PointPresenter {
     this.#replaceFormToPoint();
   };
 
-  // ⭐ Favorite
+  // Favorite
   #handleFavoriteClick = () => {
     this.#handleAction(UserAction.UPDATE_POINT, {
       ...this.#point,
@@ -106,13 +106,13 @@ export default class PointPresenter {
     });
   };
 
-  // 💾 Save (submit)
+  //Save (submit)
   #handleFormSubmit = (updatedPoint) => {
     this.#handleAction(UserAction.UPDATE_POINT, updatedPoint);
     this.#replaceFormToPoint();
   };
 
-  // 🗑 Delete
+  // Delete
   #handleDeleteClick = (pointToDelete) => {
     this.#handleAction(UserAction.DELETE_POINT, pointToDelete);
   };
